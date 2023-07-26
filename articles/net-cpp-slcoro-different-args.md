@@ -1,5 +1,5 @@
 ---
-title: "Boost.Asioのstackless coroutineの基本"
+title: "異なるコールバック引数への対応"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
