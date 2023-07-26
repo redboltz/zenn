@@ -3,7 +3,7 @@ title: "Boost.Asioのstackless coroutineの基本"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # Boost.Asioのstackless coroutine
