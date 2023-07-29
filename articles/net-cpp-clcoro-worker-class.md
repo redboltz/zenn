@@ -3,7 +3,7 @@ title: "非同期処理を行うクラス"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # ラムダ式ではなく、クラスで実装する
