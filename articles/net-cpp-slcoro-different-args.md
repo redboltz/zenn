@@ -3,7 +3,7 @@ title: "異なるコールバック引数への対応"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # 異なるコールバック引数への対応
