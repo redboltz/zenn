@@ -8,7 +8,8 @@ published: false
 
 # ラムダ式ではなく、クラスで実装する
 
-@[card](https://zenn.dev/redboltz/articles/net-cpp-slcoro-simple-lambda)では、ラムダ式でシンプルなstackless coroutineの実装を示しました。
+@[card](https://zenn.dev/redboltz/articles/net-cpp-slcoro-simple-lambda)
+では、ラムダ式でシンプルなstackless coroutineの実装を示しました。
 しかし、実際の開発ではクラスを使うことが多いと思います。
 クラスのメンバ関数として、`operator()`を持たせることで、そのクラスはラムダ式と同様にcallableとなります。
 postによって非同期処理を進めるコードを、クラスを用いて書いてみます。
