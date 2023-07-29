@@ -147,10 +147,11 @@ wokerはコピーで渡されますが、メンバがmy_appへの参照と、`as
 
 #### workerが、coroutineをメンバとして持つか継承するか
 どちらでも実現できます。
-継承版は https://godbolt.org/z/ePEneY1Wj です。
-こうした場合、
+継承版はgodboltのリンクとコードの抜粋の説明に留めます。
 
-クラス定義は
+https://godbolt.org/z/ePEneY1Wj 
+
+こうした場合、クラス定義は
 
 ```cpp
     struct worker : private as::coroutine {
