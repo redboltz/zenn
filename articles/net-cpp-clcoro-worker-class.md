@@ -8,7 +8,7 @@ published: false
 
 # ラムダ式ではなく、クラスで実装する
 
-[Boost.Asioのstackless coroutineの基本](net-cpp-slcoro-simple-lambda.md)では、ラムダ式でシンプルなstackless coroutineの実装を示しました。
+[card](https://zenn.dev/redboltz/articles/net-cpp-slcoro-simple-lambda)では、ラムダ式でシンプルなstackless coroutineの実装を示しました。
 しかし、実際の開発ではクラスを使うことが多いと思います。
 クラスのメンバ関数として、`operator()`を持たせることで、そのクラスはラムダ式と同様にcallableとなります。
 postによって非同期処理を進めるコードを、クラスを用いて書いてみます。
@@ -190,6 +190,7 @@ my_appに直接`operator()`を実装することをまず考えました。
 例えば、この例でも、`exe_`はmoved from objectになっているでしょう。
 さらに、**moveしたからといって必ずしもコピーコストが避けられるとは限りません**。
 my_appのメンバ変数に`std::array`のようなmoveがcopyにfallbackされるクラスが存在したら、結局コピーは発生します。
+さらにさらに、my_appにcopyable but not movable (コピーは可能だがムーブはできない)メンバを配置することもできません。これはなかなか大きな制約です。
 
 これらの問題を解決するために、wokerクラスに、my_appの参照を持たせる、という設計としました。
 
