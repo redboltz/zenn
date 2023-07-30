@@ -3,7 +3,7 @@ title: "複数イベントの同時待ち"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # マルチウェイト
@@ -212,8 +212,10 @@ async_add completed result is 3
 
 タイムアウトが先に発生していることが分かるでしょう。
 
-### 細かい設計判断
+### 備考
 #### タイマのキャンセルについて
 本記事では、複数イベントのキックの方法と、その待ち方にフォーカスして説明を行いました。
 よって、タイムアウトが発生したときの足し算処理のキャンセルや、足し算の結果が返ってきたときのタイムアウトタイマキャンセルなどは行っていません。
 キャンセル処理は意外と奥が深く、イベント発火とキャンセルのすれ違い(ほとんど同時に発生した場合の振る舞い)対応など、考慮すべき点があるので、別の機会に掘り下げたいと思います。
+すぐに知りたい方は私が2017年にstackoverflowに投稿した質問と回答(質問内に自ら回答)をご覧ください。
+https://stackoverflow.com/questions/43045192/how-to-avoid-firing-already-destroyed-boostasiodeadline-timer
