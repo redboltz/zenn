@@ -12,6 +12,9 @@ published: false
 
 説明用に用いたasync_add()を例に考えてみます。
 
+最終コード。そのまえに、timer2個の例があってしかるべき。
+https://godbolt.org/z/9KcaqzfG5
+
 ```cpp
 template <typename Executor, typename Cb>
 void async_add(Executor exe, int a, int b, Cb cb) {
