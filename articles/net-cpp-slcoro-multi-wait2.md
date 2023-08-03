@@ -93,6 +93,7 @@ int main() {
     my_app ma{ioc.get_executor()};
     ioc.run();
 }
+```
 
 ## 出力
 godboltでの実行
