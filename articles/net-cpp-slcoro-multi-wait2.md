@@ -3,7 +3,7 @@ title: "同じCompletionToken引数の複数イベントの同時待ち"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # 同じCompletionTokenの引数のマルチウェイト
