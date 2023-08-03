@@ -3,7 +3,7 @@ title: "CompletionTokenとオブジェクトの延命"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async,shared_ptr]
-published: false
+published: true
 ---
 
 # タイマを動的に作成
