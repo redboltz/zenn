@@ -129,9 +129,9 @@ yield {
 そのタイマをyieldの中で連続して設定します。最初に`t1_`を200ms後に発火するように設定し、続いて、`t2_`を100ms後に発火するように設定します。
 
 ```cpp
-        void operator()(boost::system::error_code const& ec) const {
-            proc(ec);
-        }
+void operator()(boost::system::error_code const& ec) const {
+    proc(ec);
+}
 ```
 
 タイマのコールバックは、上記オーバーロードにマッチします。
