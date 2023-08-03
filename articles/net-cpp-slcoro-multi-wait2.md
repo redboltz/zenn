@@ -7,7 +7,8 @@ published: false
 ---
 
 # 同じCompletionTokenの引数のマルチウェイト
-@[card](https://zenn.dev/redboltz/articles/net-cpp-slcoro-multi-wait)では、非同期足し算と、タイムアウトの2つのイベントをマルチウェイトしました。どちらが先に終了しても、有効な(nulloptでない)引数の型を確認することでイベントを区別できました。
+@[card](https://zenn.dev/redboltz/articles/net-cpp-slcoro-multi-wait)
+では、非同期足し算と、タイムアウトの2つのイベントをマルチウェイトしました。どちらが先に終了しても、有効な(nulloptでない)引数の型を確認することでイベントを区別できました。
 しかし、マルチウェイトしたい非同期処理のCompletionTokenの引数の型が、常に都合良く異なるとは限りません。
 たとえば、同じ非同期関数を2回以上呼び出した場合、どちらが完了したのか、どうやって知ればよいのでしょうか?
 
