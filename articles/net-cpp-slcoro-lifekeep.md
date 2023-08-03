@@ -1,12 +1,12 @@
 ---
-title: "同じCompletionToken引数の複数イベントの同時待ち"
+title: "CompletionTokenとオブジェクトの延命"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
 published: false
 ---
 
-# 同じCompletionTokenの引数のマルチウェイト
+# タイマを動的に作成
 @[card](https://zenn.dev/redboltz/articles/net-cpp-slcoro-multi-wait2)
 では、タイマを2つ準備して、どちらが発火したのか区別する方法を示しました。
 このとき、2つのタイマはmy_appのメンバ変数として準備しました。
