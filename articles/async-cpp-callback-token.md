@@ -383,6 +383,8 @@ future   :8005ms
 
 結果は下記のような感じになりました。
 
+パフォーマンスの高い順です。実行時間で比較すると不等号が逆になります。
+
 callback = stackless coroutine > C++20 coroutine >>> future
 
 それぞれ2番目の測定結果をもとに、グラフにしてみました。
