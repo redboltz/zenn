@@ -294,4 +294,69 @@ int main() {
 }
 ```
 
+godboltでの実行:
+https://godbolt.org/z/b4qdPGrMn
+
 ### C++20 coroutine (stackful)
+
+```cpp
+#include <iostream>
+#include <boost/asio.hpp>
+
+namespace as = boost::asio;
+
+template <typename Executor>
+as::awaitable<void>
+app(Executor exe) {
+    as::ip::tcp::resolver r{exe};
+    try {
+        auto results = co_await r.async_resolve(
+            "127.0.0.1",
+            "12345",
+            as::use_awaitable
+        );
+        for (auto const& result : results) {
+            std::cout << result.endpoint() << std::endl;
+        }
+    }
+    catch (boost::system::system_error const& se) {
+        std::cout << se.what() << std::endl;
+    }
+}
+
+int main() {
+    as::io_context ioc;
+    as::co_spawn(ioc, app(ioc.get_executor()), as::detached);
+    ioc.run();
+}
+```
+
+godboltでの実行:
+https://godbolt.org/z/1M3q5MfcK
+
+C++20のcoroutineを使うには、C++20以上指定してコンパイルする必要があります。
+coroutineを用いた非同期実行を司る関数をapp()としています。
+その戻り値は、`as::awaitable<void>`となっていて、この関数がcoroutineの実行用関数であることを示しています。
+
+```cpp
+        auto results = co_await r.async_resolve(
+            "127.0.0.1",
+            "12345",
+            as::use_awaitable
+        );
+```
+
+非同期関数async_resolve()の直前に、`co_await` と記述することで、いったん処理がasync_resolveの内部での非同期実行に移り、非同期処理が完了したら戻ってきて、resultsに結果が入ります。あたかも同期処理のように非同期処理が記述できて便利です。
+こちらも、戻り値の`boost::system::error_code`が消えていますが、これはfutureの場合と同様に、エラー発生時は、`boost::system::system_error`例外がthrowされるためです。
+IPアドレスを"invalid host"にして、例外がthrowされることを確認してみます。
+https://godbolt.org/z/focjv7dzz
+たしかに、例外がcatchされていますね。
+
+## 4つのアプローチのパフォーマンス(推測を含む)
+C++20が利用できる環境であれば、C++20 coroutineの方が処理をシンプルに記述することができます。パフォーマンスに関しては未検証ですが、以下のような関係になるかなと推測しています。
+
+callback = stackless coroutine > C++20 coroutine >>> future
+
+stackless coroutineは実際のところcallbackのメカニズムにswitch-caseによる、見かけ上の継続実行の仕組みを追加したものです。そのための条件判断コストがかかりますが、極めて小さなコストでしょう。C++20 coroutineは、stackfulなので、stackの情報を待避、復元させるなどの操作が必要かと思います。ただ、言語の仕組みに組み込まれた機能なので、かなりの効率化が期待できますので、実際はstackless coroutineと大差が無いかも知れません。futureはこれらと比較するとあきらかに遅いでしょう。
+
+
