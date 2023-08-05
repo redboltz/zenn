@@ -363,19 +363,22 @@ x86-64 clang 16.0.0 Compiler options: -std=c++20 -O3 -pthread
 基本的に、パフォーマンス測定は、クラウド環境に負荷をかけないようにローカルで行うべきです。
 (godboltは一定時間を超えるとプロセスがkillされます。)
 
-以下は私のローカル環境で、引数に1000000を渡した結果です。
+以下は私のローカル環境で、引数に1000000 (100万)を渡した結果です。
 
 ```
-callback :81ms // この値は、初回実行のため、何らかの(キャッシュとか?)ペナルティがありそうなので無視したい
-callback :43ms
-callback :59ms
-slcoro   :51ms
-slcoro   :35ms
-slcoro   :34ms
-cpp20coro:68ms
-cpp20coro:68ms
-cpp20coro:68ms
-future   :4850ms
+---  ---
+callback :112ms // この値は、初回実行のため、何らかの(キャッシュとか?)ペナルティがありそうなので無視したい
+callback :71ms
+callback :70ms
+slcoro   :89ms
+slcoro   :66ms
+slcoro   :68ms
+cpp20coro:138ms
+cpp20coro:140ms
+cpp20coro:137ms
+future   :7743ms
+future   :8189ms
+future   :8005ms
 ```
 
 結果は下記のような感じになりました。
