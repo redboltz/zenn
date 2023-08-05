@@ -1,5 +1,5 @@
 ---
-title: "コールバックのCompletionToken化"
+title: "様々なCompletionToken"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
@@ -64,7 +64,7 @@ async_resolveにhost, port, callbackの順で引数を渡しています。callb
 async_resolveの仕様は以下を参照して下さい。
 https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio/reference/ip__basic_resolver/async_resolve/overload2.html
 
-CompletionTokenは、async_resolveの場合は、ResolveTokenと呼ばれるようですが、意味は非同期処理完了時にinvokeされるもの、ということです。
+CompletionTokenは、async_resolveの場合は、ResolveTokenと呼ばれるようですが、意味は非同期処理完了時にinvokeされるCompletionTokenの一種です。
 https://www.boost.org/doc/html/boost_asio/reference/ResolveToken.html
 
 エラーコードecと、結果の集合resultsを引数で受け、結果をひとつひとつresultとして取り出し、そこから、endpointを取り出して表示しています。
@@ -221,3 +221,77 @@ boost::system::error_code, int, double|std::tuple<int, double>
 int|int
 boost::system::error_code, int, double, boost::system::error_code|std::tuple<int, double, boost::system::error_code>
 
+#### futureの欠点
+futureは、非同期処理実行用のthreadを作る必要があるという欠点があります。また、その他の方法と比較すると、非同期処理完了時の情報の受け渡しにコストがかかります。
+
+### stackless coroutine
+
+stackless coroutineに関しては、
+https://zenn.dev/redboltz/scraps/c758ec291b1a0b
+で詳しく説明しているのでここではコードを示すに留めます。
+
+```cpp
+#include <iostream>
+#include <boost/asio.hpp>
+
+namespace as = boost::asio;
+
+#include <boost/asio/yield.hpp>
+
+template <typename Executor>
+struct app {
+    app(Executor exe):r_{exe} {
+        impl_();
+    }
+   
+private:
+    friend struct impl;
+    struct impl {
+        impl(app& a):app_{a} {
+        }
+        void operator()() const {
+            proc({}, {});
+        }
+
+        void operator()(
+            boost::system::error_code const& ec,
+            as::ip::tcp::resolver::results_type results            
+        ) const {
+            proc(ec, std::move(results));
+        }
+
+    private:
+        void proc(
+            boost::system::error_code const& ec,
+            as::ip::tcp::resolver::results_type results            
+        ) const {
+            reenter(coro_) {
+                yield app_.r_.async_resolve(
+                    "127.0.0.1",
+                    "12345",
+                    *this
+                );
+                std::cout << ec.message() << std::endl;
+                for (auto const& result : results) {
+                    std::cout << result.endpoint() << std::endl;
+                }
+            }
+        }
+        app& app_;
+        mutable as::coroutine coro_;
+    };
+
+    impl impl_{*this};
+    as::ip::tcp::resolver r_;
+};
+
+#include <boost/asio/unyield.hpp>
+
+int main() {
+    as::io_context ioc;
+    app a{ioc.get_executor()};
+    ioc.run();
+}
+```
+
+### C++20 coroutine (stackful)
