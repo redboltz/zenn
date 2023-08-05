@@ -3,7 +3,7 @@ title: "様々なCompletionToken"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # CompletionTokenとは
