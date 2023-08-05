@@ -353,10 +353,34 @@ https://godbolt.org/z/focjv7dzz
 たしかに、例外がcatchされていますね。
 
 ## 4つのアプローチのパフォーマンス(推測を含む)
-C++20が利用できる環境であれば、C++20 coroutineの方が処理をシンプルに記述することができます。パフォーマンスに関しては未検証ですが、以下のような関係になるかなと推測しています。
+4つのアプローチで実行時間を測定してみました。
+
+https://godbolt.org/z/KE59aMYnW
+
+x86-64 clang 16.0.0 Compiler options: -std=c++20 -O3 -pthread
+
+実行時引数に、内部ループの回数を与えます。godboltのリンクでは 300000 を渡しています。
+基本的に、パフォーマンス測定は、クラウド環境に負荷をかけないようにローカルで行うべきです。
+(godboltは一定時間を超えるとプロセスがkillされます。)
+
+以下は私のローカル環境で、引数に1000000を渡した結果です。
+
+```
+callback :81ms // この値は、初回実行のため、何らかの(キャッシュとか?)ペナルティがありそうなので無視したい
+callback :43ms
+callback :59ms
+slcoro   :51ms
+slcoro   :35ms
+slcoro   :34ms
+cpp20coro:68ms
+cpp20coro:68ms
+cpp20coro:68ms
+future   :4850ms
+```
+
+結果は下記のような感じになりました。
 
 callback = stackless coroutine > C++20 coroutine >>> future
 
-stackless coroutineは実際のところcallbackのメカニズムにswitch-caseによる、見かけ上の継続実行の仕組みを追加したものです。そのための条件判断コストがかかりますが、極めて小さなコストでしょう。C++20 coroutineは、stackfulなので、stackの情報を待避、復元させるなどの操作が必要かと思います。ただ、言語の仕組みに組み込まれた機能なので、かなりの効率化が期待できますので、実際はstackless coroutineと大差が無いかも知れません。futureはこれらと比較するとあきらかに遅いでしょう。
-
+stackless coroutineは実際のところcallbackのメカニズムにswitch-caseによる、見かけ上の継続実行の仕組みを追加したものです。そのための条件判断コストがかかりますが、極めて小さなコストでしょう。C++20 coroutineは、stackfulなので、stackの情報を待避、復元させるなどの操作が必要かと思います。thread前提となるfutureはこれらと比較するとあきらかに遅いです。
 
