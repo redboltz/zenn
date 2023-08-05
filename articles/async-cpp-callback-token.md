@@ -385,5 +385,9 @@ future   :8005ms
 
 callback = stackless coroutine > C++20 coroutine >>> future
 
+それぞれ2番目の測定結果をもとに、グラフにしてみました。
+
+![](/images/ctperf.png)
+
 stackless coroutineは実際のところcallbackのメカニズムにswitch-caseによる、見かけ上の継続実行の仕組みを追加したものです。そのための条件判断コストがかかりますが、極めて小さなコストでしょう。C++20 coroutineは、stackfulなので、stackの情報を待避、復元させるなどの操作が必要かと思います。thread前提となるfutureはこれらと比較するとあきらかに遅いです。
 
