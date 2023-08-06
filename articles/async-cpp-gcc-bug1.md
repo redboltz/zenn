@@ -3,12 +3,12 @@ title: "g++ で C++20 coroutineに関するバグ"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [coroutine,async g++,gcc]
-published: false
+published: true
 ---
 
 # バグの概要
 ```cpp
-co_await async_func(std::vector<std::string>>{"aaa", "bbb"}, handler)
+co_await async_func(std::vector<std::string>{"aaa", "bbb"}, handler)
 ```
 のように、co_awaitする非同期関数の引数に、非PODのvectorの右辺値を渡すとinternal compiler errorが発生します。
 
@@ -130,3 +130,10 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105574
 
 2023/08/06 12:17 JSTにgodboltで確認した、x86-64-gcc (trunk)では、まだエラーが出ます。
 https://godbolt.org/z/TEhK79c31
+
+## 現在取れる対策
+
+1. g++を使わずにclang++などを使う
+2. g++を使う場合、変数を介して渡す(コードのstrのように)。std::move()して良いかは不明。実験したところ動いたが、rvalueを渡すと問題が発生するとの記載があり、xvalueでOKで, prvalueではNGという振る舞いが、たまたまなのかも知れないので、使わない方が無難。
+
+
