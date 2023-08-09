@@ -10,58 +10,46 @@ namespace echo {
 namespace as = boost::asio;
 
 template <typename Executor>
-class server {
-public:
-    server(Executor exe, std::uint16_t port)
-        :exe_{exe}, 
-         ep_{as::ip::address::from_string("127.0.0.1"), port},
-         ac_{exe_, ep_}
-    {
-        do_accept(); 
-    }
-    void close() {
-        ac_.close();
-    }
-
-private:
-    void do_accept() {
-        auto sock = std::make_shared<as::ip::tcp::socket>(exe_);
-        ac_.async_accept(
-            *sock,
-            [this, sock](boost::system::error_code const& ec) {
-                std::cout << "[server] aync_accept:" << ec.message() << std::endl;
-                if (ec) return;
-                do_read(sock);
-            }
+as::awaitable<void>
+server_impl(Executor exe, std::uint16_t port) {
+    try {
+        as::ip::tcp::endpoint ep{
+            as::ip::address::from_string("127.0.0.1"), 
+            port
+        };
+        as::ip::tcp::acceptor ac{exe, ep};
+        as::ip::tcp::socket s{exe};
+        co_await ac.async_accept(
+            s,
+            as::use_awaitable
         );
-    }
-    void do_read(auto sock) {
-        auto rbuf = std::make_shared<std::string>();
-        rbuf->resize(1024);
-        sock->async_read_some(
-            as::buffer(*rbuf),
-            [this, rbuf, sock]
-            (boost::system::error_code const& ec, std::size_t size) {
-                std::cout << "[server] aync_read_some:" << ec.message() << std::endl;
-                if (ec) return;
-                rbuf->resize(size);
-                sock->async_write_some(
-                    as::buffer(*rbuf),
-                    [this, rbuf, sock]
-                    (boost::system::error_code const& ec, std::size_t size) {
-                        std::cout << "[server] aync_write_some:" << ec.message() << std::endl;
-                        if (ec) return;
-                        do_read(sock);
-                    }
-                );
-            }
-        );
-    }
+        std::cout << "[server] " << "async_accept success" << std::endl;
 
-    Executor exe_;
-    as::ip::tcp::endpoint ep_;
-    as::ip::tcp::acceptor ac_;
-};
+        while (true) {
+            std::string buf;
+            buf.resize(1024);
+            auto size = co_await s.async_read_some(
+                as::buffer(buf),
+                as::use_awaitable
+            );
+            std::cout << "[server] " << "async_read success" << std::endl;
+            buf.resize(size);
+            co_await s.async_write_some(
+                as::buffer(buf),
+                as::use_awaitable
+            );
+            std::cout << "[server] " << "async_write success" << std::endl;
+        }
+    }
+    catch (boost::system::system_error const& se) {
+        std::cout << "[server] " << se.code().message() << std::endl;
+    }
+}
+
+template <typename Executor>
+void server(Executor exe, std::uint16_t port) {
+    as::co_spawn(exe, server_impl(exe, port), as::detached);
+}
 
 } // echo
 
