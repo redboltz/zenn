@@ -1,6 +1,3 @@
-#include <memory>
-#include <boost/asio.hpp>
-
 #if !defined(ECHO_SERVER_HPP)
 #define ECHO_SERVER_HPP
 
@@ -27,14 +24,33 @@ private:
         auto sock = std::make_shared<as::ip::tcp::socket>(exe_);
         ac_.async_accept(
             *sock,
-            [sock](boost::system::error_code const& ec) {
-                if (!ec) {
-                    do_read();
-                }
+            [this, sock](boost::system::error_code const& ec) {
+                std::cout << "[server] aync_accept:" << ec.message() << std::endl;
+                if (ec) return;
+                do_read(sock);
             }
         );
     }
-    void do_read() {
+    void do_read(auto sock) {
+        auto rbuf = std::make_shared<std::string>();
+        rbuf->resize(1024);
+        sock->async_read_some(
+            as::buffer(*rbuf),
+            [this, rbuf, sock]
+            (boost::system::error_code const& ec, std::size_t size) {
+                std::cout << "[server] aync_read_some:" << ec.message() << std::endl;
+                if (ec) return;
+                sock->async_write_some(
+                    as::buffer(*rbuf),
+                    [this, rbuf, sock]
+                    (boost::system::error_code const& ec, std::size_t size) {
+                        std::cout << "[server] aync_write_some:" << ec.message() << std::endl;
+                        if (ec) return;
+                        do_read(sock);
+                    }
+                );
+            }
+        );
     }
 
     Executor exe_;
