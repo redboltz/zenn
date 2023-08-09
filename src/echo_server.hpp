@@ -1,6 +1,10 @@
 #if !defined(ECHO_SERVER_HPP)
 #define ECHO_SERVER_HPP
 
+#include <memory>
+#include <iostream>
+#include <boost/asio.hpp>
+
 namespace echo {
 
 namespace as = boost::asio;
