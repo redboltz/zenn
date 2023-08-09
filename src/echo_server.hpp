@@ -44,6 +44,7 @@ private:
             (boost::system::error_code const& ec, std::size_t size) {
                 std::cout << "[server] aync_read_some:" << ec.message() << std::endl;
                 if (ec) return;
+                rbuf->resize(size);
                 sock->async_write_some(
                     as::buffer(*rbuf),
                     [this, rbuf, sock]
