@@ -3,7 +3,7 @@ title: "タイマのすれ違い発火に備える"
 emoji: "⏰"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,timer,async]
-published: false
+published: true
 ---
 
 # タイマの発火とキャンセルが同時に発生した場合の振る舞い
