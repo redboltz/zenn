@@ -197,5 +197,117 @@ mapに要素は無いため、`if (it == timers.end()) {`の条件が成立し�
 
 ![](/images/timer.png)
 
+あくまでもイメージで、詳細はasioのコードを読むべきですが、タイマ設定した時刻に達したときに、ecにSuccessが設定され、io_contextにpostされるような振る舞いとなります。ですから、それ以降に、timerをcancelしても、すでに、そのタイマは管理対象では無いため、何も起こらず空振りに終わるわけです。io_contextとtimerは密結合しておらず(実際それが適切な設計と思います)、timerのAPIを介してio_contextから発火イベントを削除することはできません。
+
 ## 解決策を適用したコード
 
+```cpp
+#include <iostream>
+#include <memory>
+#include <map>
+#include <boost/asio.hpp>
+
+namespace as = boost::asio;
+// steady_timer with index ctor/dtor print
+struct debug_tim : as::steady_timer {
+    debug_tim(as::io_context& ioc, int i) : as::steady_timer{ioc}, i{i} {
+        std::cout << " debug_tim() " << i << std::endl;
+    }
+    ~debug_tim() {
+        std::cout << "~debug_tim() " << i << std::endl;
+    }
+    int i;
+};
+
+int main() {
+    constexpr int max = 5;
+    as::io_context ioc;
+    std::map<int, std::shared_ptr<debug_tim>> timers;
+    for (int i = 0; i != max; ++i) {
+        auto tim = std::make_shared<debug_tim>(ioc, i);
+        std::cout << " set timer   " << i << std::endl;
+        tim->expires_after(std::chrono::seconds(1));
+        timers.emplace(i, tim);
+        tim->async_wait(
+            [&timers, i, wp = std::weak_ptr<debug_tim>(tim)]
+            (boost::system::error_code const& ec) {
+                if (auto sp = wp.lock()) {
+                    std::cout << " timer fired " << i << " : " <<  ec.message() << std::endl;
+                    auto it = timers.find(i);
+                    BOOST_ASSERT(it != timers.end());
+                    // erase (and cancel) other timer
+                    int other_idx = (i + 1) % max;
+                    std::cout << "  erase " << other_idx << std::endl;
+                    timers.erase(other_idx);
+                }
+                else {
+                    std::cout << "  already destructed." << std::endl;
+                }
+            }
+        );
+    }
+    ioc.run();
+}
+```
+
+
+## 解決策を適用した出力(一例)
+
+godboltでの実行:
+https://godbolt.org/z/q5Mn7h4M5
+
+```
+ debug_tim() 0
+ set timer   0
+ debug_tim() 1
+ set timer   1
+ debug_tim() 2
+ set timer   2
+ debug_tim() 3
+ set timer   3
+ debug_tim() 4
+ set timer   4
+ timer fired 0 : Success
+  erase 1
+~debug_tim() 1
+  already destructed.
+ timer fired 2 : Success
+  erase 3
+~debug_tim() 3
+  already destructed.
+ timer fired 4 : Success
+  erase 0
+~debug_tim() 0
+~debug_tim() 4
+~debug_tim() 2
+```
+
+## 詳細
+
+解決にはweak_ptrを用います。
+
+```cpp
+tim->async_wait(
+    [&timers, i, wp = std::weak_ptr<debug_tim>(tim)]
+    (boost::system::error_code const& ec) {
+        if (auto sp = wp.lock()) {
+            std::cout << " timer fired " << i << " : " <<  ec.message() << std::endl;
+            auto it = timers.find(i);
+            BOOST_ASSERT(it != timers.end());
+            // erase (and cancel) other timer
+            int other_idx = (i + 1) % max;
+            std::cout << "  erase " << other_idx << std::endl;
+            timers.erase(other_idx);
+        }
+        else {
+            std::cout << "  already destructed." << std::endl;
+        }
+    }
+);
+```
+
+まず、async_waitのCompletionTokenのラムダ式で、timをweak_ptr wpとしてキャプチャしています。
+そして、ラムダ式の冒頭で、wp.lock()によって、wpからshared_ptrを作ろうとしています。もし、すでにtimが解放済みならば、このif文は成立せず`already destructed`が出力されます。タイマの仕組みは変わらないため、従来通り、ecがSuccessで削除済みのtimに対応するCompletionTokenがinvokeされることはありますが、このif文によって解放済みかどうかチェックでき、適切に処理を分岐できるわけです。
+
+今回の例では、debug_timをshared_ptr, weak_ptrで管理しましたが、実際のアプリケーションコードでは、何らかのタイマを内包するクラスをshared_ptr, weak_ptrで管理することが多いでしょう。
+たとえば、一定時間以上通信が無いと、切断されるセッションでは、セッションクラスの中にタイマを埋め込み、タイマが発火したらセッションをクローズして削除することがあります。ちょうどタイマ発火と同時に、ユーザがセッションをクローズしてきた場合などに、この問題が生じやすく、また、この解決策が有効です。
