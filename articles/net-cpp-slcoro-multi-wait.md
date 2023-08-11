@@ -219,3 +219,8 @@ async_add completed result is 3
 キャンセル処理は意外と奥が深く、イベント発火とキャンセルのすれ違い(ほとんど同時に発生した場合の振る舞い)対応など、考慮すべき点があるので、別の機会に掘り下げたいと思います。
 すぐに知りたい方は私が2017年にstackoverflowに投稿した質問と回答(質問内に自ら回答)をご覧ください。
 https://stackoverflow.com/questions/43045192/how-to-avoid-firing-already-destroyed-boostasiodeadline-timer
+
+##### 追記
+
+本件に関する記事を書きました。
+https://zenn.dev/redboltz/articles/timer-cpp-timing
