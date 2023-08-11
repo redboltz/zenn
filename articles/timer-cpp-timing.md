@@ -195,11 +195,7 @@ mapに要素は無いため、`if (it == timers.end()) {`の条件が成立し�
 なぜこのような振る舞いになるのでしょうか?Boost.Asioのバグでしょうか?
 違います。これを理解するには、Boost.Asioのio_contextのメカニズムを知る必要があります。
 
-![](/images/timer.svg)
-
-
-
-![](/images/ctperf.png)
+![](/images/timer.png)
 
 ## 解決策を適用したコード
 
