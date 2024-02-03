@@ -3,7 +3,7 @@ title: "debug print時のthread識別"
 emoji: "🧵"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [C++,thread,debug]
-published: false
+published: true
 ---
 
 # Threadのdebug printに関するTips
