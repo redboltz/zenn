@@ -3,7 +3,7 @@ title: "C++20 coroutineとCompletionToken"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async]
-published: false
+published: true
 ---
 
 # Coroutine と CompletionToken
@@ -163,4 +163,6 @@ use_awaitable|される|可能|不可能|可能|不可能
 deferred|されない|可能|可能|不可能|可能
 use_promise|される|可能|可能|不可能|不可能
 
-
+残念ながら、今のところ、全てのニーズを満たすCompletionTokenは存在しません。
+状況に応じて使い分ける必要があります。
+そのあたりは、今後個別に紹介していきます。
