@@ -40,7 +40,7 @@ auto async_func(move_only arg1, ref_only& arg2, CompletionToken&& token) {
 }
 ```
 
-arg2を渡すのに、`std::ref`を用いています。これは、CompletionTokenにCoroutine関連のものを渡した場合に、コピーを避けるために必要です。
+arg2を渡すのに、`std::ref`を用いています。これは、CompletionTokenにCoroutine関連のtoken(deferred, use_awaitableなど)を渡した場合に、コピーを避けるために必要です。
 
 
 ## Code
