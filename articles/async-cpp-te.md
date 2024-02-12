@@ -3,7 +3,7 @@ title: "CompletionTokenと型消去"
 emoji: "🔌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [boost,asio,coroutine,async.co_composed]
-published: false
+published: true
 ---
 
 # 型消去の目的
@@ -227,7 +227,7 @@ godboltでの実行:
 https://godbolt.org/z/39jfbovzE
 
 ### variantでCompletionTokenを試す
-
+#### `awaitable<T>関数`からの呼び出し
 上記のコードは、variantを利用した型消去のコード例です。オブジェクト指向アプローチと同様、main関数では、コールバック関数を与えています。coroutineを利用するコードに書き換えてみます。
 
 ```cpp
@@ -261,5 +261,154 @@ int main() {
 godboltでの実行:
 https://godbolt.org/z/sYz6Ycva7
 
-コールバックの場合と異なり、vectorの要素ひとつずつ結果待ちしてしまっており、効率が悪いですが、きちんとcoroutineとして動作しています。
+コールバックの場合と異なり、vectorの要素ひとつずつ結果待ちしてしまっており、効率が悪いですが、きちんとcoroutineとして動作しています。複数の要求を出して、後で一括して待つ方法は別記事で触れたいと思います。
 
+#### `CompletionToken`サポート関数からの呼び出し
+次に、co_composedな非同期関数からの呼び出しを考えてみます。co_composedな非同期関数に関しては、以下を参照してください。
+@[card](https://zenn.dev/redboltz/articles/async-cpp-co-composed)
+
+この記事でも触れたように、`co_composed`の実装では、`CompletionToken` `use_awaitable`を使うことができません。コンパイルエラーになってしまいます。
+
+```cpp
+template <typename CompletionToken>
+auto co_composed_func(
+    as::any_io_executor exe,
+    CompletionToken&& token
+) {
+    return as::async_initiate<
+        CompletionToken,
+        void()
+    >(
+        as::experimental::co_composed<
+            void()
+        >(
+            [](auto /*state*/, auto exe) -> void {
+                std::vector<connection> v;
+                v.emplace_back(tcp(exe));
+                v.emplace_back(tls(exe));
+                for (auto& e : v) {
+                    co_await std::visit(
+                        [](auto& e) -> as::awaitable<void> {
+                            auto [ec] = co_await e.async_send(
+                                "hello",
+                                as::as_tuple(as::use_awaitable) // これができない
+                            );
+                            std::cout << "finish ec:" << ec.message() << std::endl;
+                            co_return;
+                        },
+                        e
+                    );
+                }
+            },
+            exe
+        ),
+        token,
+        exe
+    );
+}
+```
+
+godboltでの実行:
+https://godbolt.org/z/KfWWMxh9j
+
+そこで、`deferred`に変更してみます。
+
+```cpp
+template <typename CompletionToken>
+auto co_composed_func(
+    as::any_io_executor exe,
+    CompletionToken&& token
+) {
+    return as::async_initiate<
+        CompletionToken,
+        void()
+    >(
+        as::experimental::co_composed<
+            void()
+        >(
+            [](auto /*state*/, auto exe) -> void {
+                std::vector<connection> v;
+                v.emplace_back(tcp(exe));
+                v.emplace_back(tls(exe));
+                for (auto& e : v) {
+                    auto [ec] = co_await std::visit(       // 3. ここで、co_awaitする
+                        [](auto& e) {
+                            return  e.async_send(          // 2. そのままreturnして
+                                "hello",
+                                as::as_tuple(as::deferred) // 1. このように変更
+                            );
+                        },
+                        e
+                    );
+                    std::cout << "finish ec:" << ec.message() << std::endl;
+                }
+                co_return {};
+            },
+            exe
+        ),
+        token,
+        exe
+    );
+}
+```
+
+godboltでの実行:
+https://godbolt.org/z/3fs87jzPE
+
+コンパイルエラーの種類が変わりました。`visit()`の戻り値の型が不一致というstatic_assertエラーとなっています。
+`deferred`を用いた場合、戻り値の型が、型消去されていないため、`tcp`と`tls`で(同じようにそれぞれco_awaitできるものの)別の型になってしまうのです。
+
+これは、困りました。
+これを解決するには、また別のexperimental featureである、`use_promise`を使います。
+
+```cpp
+#include <boost/asio/experimental/promise.hpp>
+#include <boost/asio/experimental/use_promise.hpp>
+```
+
+```cpp
+template <typename CompletionToken>
+auto co_composed_func(
+    as::any_io_executor exe,
+    CompletionToken&& token
+) {
+    return as::async_initiate<
+        CompletionToken,
+        void()
+    >(
+        as::experimental::co_composed<
+            void()
+        >(
+            [](auto /*state*/, auto exe) -> void {
+                std::vector<connection> v;
+                v.emplace_back(tcp(exe));
+                v.emplace_back(tls(exe));
+                for (auto& e : v) {
+                    auto [ec] = co_await std::visit(
+                        [](auto& e) {
+                            return  e.async_send(
+                                "hello",
+                                as::as_tuple(as::experimental::use_promise) // use_promiseに変更
+                            );
+                        },
+                        e
+                    );
+                    std::cout << "finish ec:" << ec.message() << std::endl;
+                }
+                co_return {};
+            },
+            exe
+        ),
+        token,
+        exe
+    );
+}
+```
+
+godboltでの実行:
+https://godbolt.org/z/TYTvqnMc5
+
+`use_promise`は、`co_composed`な実装内部で使うことが可能で、かつ、型消去されるので、`std::visit()`の戻り値の型が、`tcp`と`tls`で同じとなり、先程のstatic_assertを解決する事ができます。
+
+# 備考
+本アプローチは、複数のexperimentalなfeatureを組み合わせて利用しています。experimentalなfeatureは、将来変更される可能性が高いことに注意してください。Boost.1.84.0で動作確認しています。
