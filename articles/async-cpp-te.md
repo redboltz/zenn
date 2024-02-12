@@ -112,3 +112,154 @@ https://godbolt.org/z/o6cWjfqrq
 この段階でエラーとなります。仮想関数は、関数テンプレート引数や、autoの戻り値といった、推論によって導かれる要素を持つことができないためです。
 
 ## variantによるアプローチ
+
+### Code
+
+```cpp
+#include <iostream>
+#include <chrono>
+#include <string>
+#include <variant>
+#include <vector>
+#include <boost/asio.hpp>
+
+namespace as = boost::asio;
+
+struct tcp {
+    tcp(as::any_io_executor exe):exe_{std::move(exe)} {}
+    template <typename CompletionToken>
+    auto async_send(
+        std::string data, 
+        CompletionToken&& token
+    ) {
+        return as::async_initiate<
+            CompletionToken,
+            void(boost::system::error_code)
+        >(
+            [](
+                auto completion_handler,
+                as::any_io_executor& exe, 
+                std::string data
+            ) {
+                as::post(
+                    exe,
+                    [
+                        data = std::move(data), 
+                        completion_handler = std::move(completion_handler)
+                    ] () mutable {
+                        std::cout 
+                            << "tcp data:" << data 
+                            << " send finish" << std::endl;
+                        std::move(completion_handler)(boost::system::error_code{});
+                    }
+                );
+            },
+            token,
+            std::ref(exe_),
+            std::move(data)
+        );
+    }
+    as::any_io_executor exe_;
+};
+
+struct tls {
+    tls(as::any_io_executor exe):exe_{std::move(exe)} {}
+    template <typename CompletionToken>
+    auto async_send(
+        std::string data, 
+        CompletionToken&& token
+    ) {
+        return as::async_initiate<
+            CompletionToken,
+            void(boost::system::error_code)
+        >(
+            [](
+                auto completion_handler,
+                as::any_io_executor& exe, 
+                std::string data
+            ) {
+                as::post(
+                    exe,
+                    [
+                        data = std::move(data), 
+                        completion_handler = std::move(completion_handler)
+                    ] () mutable {
+                        std::cout 
+                            << "tls data:" << data 
+                            << " send finish" << std::endl;
+                        std::move(completion_handler)(boost::system::error_code{});
+                    }
+                );
+            },
+            token,
+            std::ref(exe_),
+            std::move(data)
+        );
+    }
+    as::any_io_executor exe_;
+};
+
+using connection = std::variant<tcp, tls>;
+
+int main() {
+    as::io_context ioc;
+    std::vector<connection> v;
+    v.emplace_back(tcp(ioc.get_executor()));
+    v.emplace_back(tls(ioc.get_executor()));
+    for (auto& e : v) {
+        std::visit(
+            [](auto& e) {
+                e.async_send(
+                    "hello", 
+                    [](auto ec) { 
+                        std::cout << "finish ec:" << ec.message() << std::endl; 
+                    }
+                );
+            },
+            e
+        );
+    }
+    ioc.run();
+}
+```
+
+godboltでの実行:
+https://godbolt.org/z/39jfbovzE
+
+### variantでCompletionTokenを試す
+
+上記のコードは、variantを利用した型消去のコード例です。オブジェクト指向アプローチと同様、main関数では、コールバック関数を与えています。coroutineを利用するコードに書き換えてみます。
+
+```cpp
+as::awaitable<void> proc(as::io_context& ioc) {
+    std::vector<connection> v;
+    v.emplace_back(tcp(ioc.get_executor()));
+    v.emplace_back(tls(ioc.get_executor()));
+    for (auto& e : v) {
+        co_await std::visit(
+            [](auto& e) -> as::awaitable<void> {
+                auto [ec] = co_await e.async_send(
+                    "hello",
+                    as::as_tuple(as::use_awaitable)
+                );
+                std::cout << "finish ec:" << ec.message() << std::endl;
+                co_return;
+            },
+            e
+        );
+    }
+    co_return;
+}
+
+int main() {
+    as::io_context ioc;
+    as::co_spawn(ioc.get_executor(), proc(ioc), as::detached);
+    ioc.run();
+}
+```
+
+godboltでの実行:
+https://godbolt.org/z/sYz6Ycva7
+
+コールバックの場合と異なり、vectorの要素ひとつずつ結果待ちしてしまっており、効率が悪いですが、きちんとcoroutineとして動作しています。
+
